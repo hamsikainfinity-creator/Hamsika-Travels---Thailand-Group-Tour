@@ -2,46 +2,44 @@
 import React, { useState, useEffect } from 'react';
 import LandingPage from './components/LandingPage';
 import AdminDashboard from './components/AdminDashboard';
-import { Booking, ItineraryDay } from './types';
-import { INITIAL_ITINERARY } from './constants';
+import { Booking, ItineraryPackage } from './types';
+import { INITIAL_PACKAGES } from './constants';
 
 const apiService = {
   fetchBookings: async (): Promise<Booking[]> => {
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 400));
     const data = localStorage.getItem('hamsika_bookings');
     return data ? JSON.parse(data) : [];
   },
   saveBookings: async (bookings: Booking[]): Promise<void> => {
-    await new Promise(r => setTimeout(r, 500));
     localStorage.setItem('hamsika_bookings', JSON.stringify(bookings));
   },
-  fetchItinerary: async (): Promise<ItineraryDay[]> => {
-    await new Promise(r => setTimeout(r, 600));
-    const data = localStorage.getItem('hamsika_itinerary');
-    return data ? JSON.parse(data) : INITIAL_ITINERARY;
+  fetchPackages: async (): Promise<ItineraryPackage[]> => {
+    await new Promise(r => setTimeout(r, 400));
+    const data = localStorage.getItem('hamsika_packages');
+    return data ? JSON.parse(data) : INITIAL_PACKAGES;
   },
-  saveItinerary: async (itinerary: ItineraryDay[]): Promise<void> => {
-    await new Promise(r => setTimeout(r, 500));
-    localStorage.setItem('hamsika_itinerary', JSON.stringify(itinerary));
+  savePackages: async (packages: ItineraryPackage[]): Promise<void> => {
+    localStorage.setItem('hamsika_packages', JSON.stringify(packages));
   }
 };
 
 const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
+  const [packages, setPackages] = useState<ItineraryPackage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [b, i] = await Promise.all([
+        const [b, p] = await Promise.all([
           apiService.fetchBookings(),
-          apiService.fetchItinerary()
+          apiService.fetchPackages()
         ]);
         setBookings(b);
-        setItinerary(i);
+        setPackages(p);
       } catch (err) {
         console.error("Data fetch error:", err);
       } finally {
@@ -51,20 +49,23 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
+  const activePackage = packages.find(p => p.isActive) || packages[0];
+
   const handleUpdateBookings = async (newBookings: Booking[]) => {
     setBookings(newBookings);
     await apiService.saveBookings(newBookings);
   };
 
-  const handleUpdateItinerary = async (newItinerary: ItineraryDay[]) => {
-    setItinerary(newItinerary);
-    await apiService.saveItinerary(newItinerary);
+  const handleUpdatePackages = async (newPackages: ItineraryPackage[]) => {
+    setPackages(newPackages);
+    await apiService.savePackages(newPackages);
   };
 
-  const handleBookingSubmit = async (booking: Omit<Booking, 'id' | 'status' | 'timestamp'>) => {
+  const handleBookingSubmit = async (booking: Omit<Booking, 'id' | 'status' | 'timestamp' | 'itineraryId'>) => {
     const newBooking: Booking = {
       ...booking,
       id: Math.random().toString(36).substr(2, 9),
+      itineraryId: activePackage?.id || 'unknown',
       status: 'Pending Verification',
       timestamp: Date.now(),
     };
@@ -77,7 +78,7 @@ const App: React.FC = () => {
     <div className="min-h-screen">
       <nav className="fixed top-0 w-full z-50 glass-nav transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center space-x-3 group cursor-pointer">
+          <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => setIsAdmin(false)}>
             <div className="bg-emerald-600 text-white w-10 h-10 flex items-center justify-center rounded-xl font-bold shadow-lg transform group-hover:rotate-12 transition-transform">
               HT
             </div>
@@ -100,21 +101,25 @@ const App: React.FC = () => {
           <div className="flex items-center justify-center h-[60vh]">
             <div className="relative">
               <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-              <div className="mt-4 text-emerald-600 font-bold animate-pulse">Syncing with Server...</div>
+              <div className="mt-4 text-emerald-600 font-bold animate-pulse">Syncing...</div>
             </div>
           </div>
         ) : isAdmin ? (
           <AdminDashboard 
             bookings={bookings} 
-            itinerary={itinerary}
+            packages={packages}
             updateBookings={handleUpdateBookings}
-            updateItinerary={handleUpdateItinerary}
+            updatePackages={handleUpdatePackages}
           />
         ) : (
-          <LandingPage 
-            itinerary={itinerary} 
-            onBookingSubmit={handleBookingSubmit} 
-          />
+          activePackage ? (
+            <LandingPage 
+              itineraryPackage={activePackage} 
+              onBookingSubmit={handleBookingSubmit} 
+            />
+          ) : (
+            <div className="p-20 text-center text-gray-400">No active itineraries found. Check Admin Panel.</div>
+          )
         )}
       </main>
 

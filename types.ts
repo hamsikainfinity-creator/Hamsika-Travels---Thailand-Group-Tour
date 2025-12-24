@@ -3,6 +3,7 @@ export type BookingStatus = 'Pending Verification' | 'Verified' | 'Rejected';
 
 export interface Booking {
   id: string;
+  itineraryId: string; // Linked to a specific package
   fullName: string;
   mobile: string;
   email: string;
@@ -21,7 +22,15 @@ export interface ItineraryDay {
   imageUrl: string;
 }
 
+export interface ItineraryPackage {
+  id: string;
+  startDate: string; // e.g., "2026-01-18"
+  endDate: string;   // e.g., "2026-01-22"
+  days: ItineraryDay[];
+  isActive: boolean;
+}
+
 export interface AppState {
   bookings: Booking[];
-  itinerary: ItineraryDay[];
+  packages: ItineraryPackage[];
 }
